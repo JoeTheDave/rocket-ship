@@ -7,19 +7,22 @@ const ship = new Image();
 ship.src = shipImg;
 
 const rocketSize = 50;
-// const acceleration = 5;
-// const maxVelocity = 10;
-const maxRotationalVelocity = 120;
-const rotationalAcceleration = 360;
+const acceleration = 1;
+const maxVelocity = 50;
+const maxRotationalVelocity = 180;
+const rotationalAcceleration = 720;
 
 let x = Math.floor(window.innerWidth / 2);
 let y = Math.floor(window.innerHeight / 2);
 let cursorX = x;
 let cursorY = y;
-// let xVel = 0;
-// let yVel = 0;
+let xAcc = 0;
+let yAcc = 0;
+let xVel = 0;
+let yVel = 0;
+let velocity = 10;
 let rotationalVelocity = 0;
-let rotation = 60;
+let rotation = 30;
 let timestamp = new Date().getTime();
 
 function init() {
@@ -36,7 +39,8 @@ function init() {
   window.requestAnimationFrame(draw);
 }
 
-const radiansToDegrees = (radians) => radians * (180 / Math.PI);
+const radiansToDegrees = (radians) => (radians * 180) / Math.PI;
+const degreesToRadians = (degrees) => (degrees * Math.PI) / 180;
 
 const determineAngleToDestination = () => {
   const xComponent = cursorX - x;
@@ -67,6 +71,12 @@ const determineAngleCorrection = () => {
   return diff < -180 ? diff + 360 : diff;
 };
 
+const getVectorComponents = (angle, magnitude) => {
+  const x = Math.sin(degreesToRadians(angle)) * magnitude;
+  const y = Math.sin(degreesToRadians(90 - angle)) * magnitude;
+  return [x, y];
+};
+
 function draw() {
   const correction = determineAngleCorrection();
 
@@ -79,6 +89,13 @@ function draw() {
   ctx.fillStyle = 'rgba(0, 0, 0, 1)';
   ctx.fillText(`Rotational Velocity: ${rotationalVelocity}`, 10, 20);
   ctx.fillText(`Angular Correction: ${correction}`, 10, 40);
+  ctx.fillText(`Heading: ${rotation}`, 10, 60);
+
+  ctx.fillText(`xAcc: ${xAcc}`, 10, 80);
+  ctx.fillText(`yAcc: ${yAcc}`, 10, 100);
+  ctx.fillText(`xVel: ${xVel}`, 10, 120);
+  ctx.fillText(`yVel: ${yVel}`, 10, 140);
+
   ctx.restore();
 
   // Determine time modifier
@@ -88,7 +105,6 @@ function draw() {
   const timeModifier = elapsed / 1000;
 
   // Steer ship
-
   const rotationalVelocityDelta = rotationalAcceleration * timeModifier;
   if (correction) {
     if (correction > 0) {
@@ -114,15 +130,32 @@ function draw() {
       );
     }
     rotation = rotation + rotationalVelocity * timeModifier;
+    if (rotation >= 360) {
+      rotation = rotation - 360;
+    }
+    if (rotation < 0) {
+      rotation = rotation + 360;
+    }
   }
 
-  // rotation = rotation + maxRotationalVelocity * timeModifier;
-  // if (rotation >= 360) {
-  //   rotation = rotation - 360;
-  // }
-  // if (rotation < 0) {
-  //   rotation = rotation + 360;
-  // }
+  // Move Rocket
+  const currentVelocityComponents = getVectorComponents(rotation, velocity);
+  const accelerationComponents = getVectorComponents(rotation, acceleration);
+
+  xAcc += accelerationComponents[0] * timeModifier;
+  yAcc += accelerationComponents[1] * timeModifier;
+
+  xVel = Math.max(
+    Math.min(xVel + currentVelocityComponents[0] + xAcc, 300),
+    -300,
+  );
+  yVel = Math.max(
+    Math.min(yVel + currentVelocityComponents[1] + yAcc, 300),
+    -300,
+  );
+
+  x += xVel * timeModifier;
+  y -= yVel * timeModifier;
 
   // Draw rocket
   ctx.save();
